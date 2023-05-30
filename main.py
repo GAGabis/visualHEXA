@@ -1,59 +1,149 @@
 import cv2
 import numpy as np
+import math
+import time
+# Função para redimensionar a imagem mantendo a proporção
+def resize(image, width=None, height=None):
+    if width is None and height is None:
+        return image
+    elif width is None:
+        r = height / image.shape[0]
+        dim = (int(image.shape[1] * r), height)
+    else:
+        r = width / image.shape[1]
+        dim = (width, int(image.shape[0] * r))
 
+    return cv2.resize(image, dim, interpolation=cv2.INTER_AREA)
+
+# Função para desenhar o texto em uma imagem
+def draw_text(image, text, position):
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 1
+    font_thickness = 2
+    text_size, _ = cv2.getTextSize(text, font, font_scale, font_thickness)
+
+    x, y = position
+    text_position = (x, y + text_size[1])
+    cv2.putText(image, text, text_position, font, font_scale, (255, 255, 255), font_thickness, cv2.LINE_AA)
+
+# Captura de vídeo da webcam
 cap = cv2.VideoCapture(0)
 
-# image of the crosshair
-mira = np.zeros((400, 400, 3), dtype=np.uint8)
+# Verifica se a webcam foi aberta corretamente
+if not cap.isOpened():
+    print("Não foi possível abrir a webcam.")
+    exit()
 
-cv2.line(mira, (0, 200), (400, 200), (0, 255, 255), 2)
+# Obtém as dimensões da tela
+screen_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+screen_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-# the static circle
-mira_original = mira.copy()
-cv2.circle(mira_original, (200, 200), 200, (0, 255, 255), 2)
+# Calcula as dimensões das telas na grade
+grid_width = screen_width // 2
+grid_height = screen_height // 2
 
-angle = 0
+# Loop principal
 while True:
-
+    # Captura o frame da webcam
     ret, frame = cap.read()
 
     if not ret:
-        print("Não foi possível ler o frame")
+        print("Não foi possível capturar o quadro.")
         break
 
-    frame_resized = cv2.resize(frame, (400, 400))
+    # Redimensiona a imagem da webcam para a resolução desejada
+    resized_frame = resize(frame, width=grid_width, height=grid_height)
 
-    # we use this to define the rotation matrix with the current angle
-    center = (200, 200)
-    M = cv2.getRotationMatrix2D(center, angle, 1.0)
+    # Cria uma imagem preta para o canto superior esquerdo
+    black_screen = np.zeros((grid_height, grid_width, 3), dtype=np.uint8)
 
-    # rotate the crosshair
-    mira_rotated = cv2.warpAffine(mira, M, (mira.shape[1], mira.shape[0]))
 
-    # copy the static circle from the original image to the rotated image
-    mira_rotated_with_circle = mira_rotated.copy()
-    mira_rotated_with_circle[mira_original > 0] = mira_original[mira_original > 0]
+    # Desenha um círculo vazado no canto inferior esquerdo
+    circle_radius = min(grid_width, grid_height) // 2
+    circle_center = (grid_width // 2, grid_height // 2)
+    cv2.circle(black_screen, circle_center, circle_radius, (0, 255, 255), 2)
 
-    # this is basically edge detection
-    gray = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2GRAY)
-    edges = cv2.Canny(gray, 100, 200)
-    edges = cv2.Canny(frame_resized, 100, 200)  # detect edges
+    # Adiciona a linha que gira como um radar
+    #angle = (360 * time.time()) % 360  # Ângulo da linha (varia ao longo do tempo)
+    #line_length = circle_radius  # Comprimento da linha
+    #end_point = (int(circle_center[0] + line_length * math.cos(math.radians(angle))),
+                 #int(circle_center[1] + line_length * math.sin(math.radians(angle))))
+    #cv2.line(black_screen, circle_center, end_point, (0, 255, 0), 2)
 
-    # integrating edge detection into crosshair
-    mira_edges = mira_rotated_with_circle.copy()
-    mira_edges[edges != 0] = (0, 255, 0)
+    vertical_line_start = (
+        int(circle_center[0]),
+        int(circle_center[1] - circle_radius)
+    )
+    vertical_line_end = (
+        int(circle_center[0]),
+        int(circle_center[1] + circle_radius)
+    )
 
-    # add current angle to the image
-    cv2.putText(mira_edges, f"Angle: {angle}", (315, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+    cv2.line(black_screen, vertical_line_start, vertical_line_end, (0, 255, 255), 2)
+    horizontal_line_length = circle_radius  # Comprimento da linha horizontal
+    horizontal_line_angle = 0
 
-    # as the name of the variable says, they are the images together, both the webcam and the on-board computer
-    combined_image = cv2.hconcat([mira_edges, frame_resized])
+    horizontal_line_start = (
+        int(circle_center[0] - horizontal_line_length / 2 * math.cos(math.radians(horizontal_line_angle))),
+        int(circle_center[1] - horizontal_line_length / 2 * math.sin(math.radians(horizontal_line_angle)))
+    )
+    horizontal_line_end = (
+        int(circle_center[0] + horizontal_line_length / 2 * math.cos(math.radians(horizontal_line_angle))),
+        int(circle_center[1] + horizontal_line_length / 2 * math.sin(math.radians(horizontal_line_angle)))
+    )
 
-    cv2.imshow("Webcam + Mira", combined_image)
-    angle += 1
-    if angle > 180:
-        angle = 0
-    if cv2.waitKey(10) & 0xFF == ord('q'):
+    cv2.line(black_screen, horizontal_line_start, horizontal_line_end, (0, 255, 255), 2)
+
+    # Cria uma imagem vazia para o canto superior direito
+    empty_screen = np.zeros((grid_height, grid_width, 3), dtype=np.uint8)
+
+    # Desenha o texto nas telas inferior esquerda
+    text1 = "Motor1"
+    text2 = "Motor2"
+    text3 = "Motor3"
+    text4 = "Motor4"
+    text_position = (20, 40)
+    draw_text(empty_screen, text1, text_position)
+    draw_text(empty_screen, text2, (text_position[0], text_position[1] + 40))
+    draw_text(empty_screen, text3, (text_position[0], text_position[1] + 80))
+    draw_text(empty_screen, text4, (text_position[0], text_position[1] + 120))
+
+    # Redimensiona a
+    resized_frame = resize(frame, width=grid_width, height=grid_height)
+
+    # Aplica o filtro Canny na imagem da webcam
+    # Aplica o filtro Canny na imagem da webcam
+    edges = cv2.Canny(resized_frame, 100, 200)
+
+    # Cria uma imagem preta para o fundo
+    black_background = np.zeros((grid_height, grid_width, 3), dtype=np.uint8)
+
+    # Define as cores das bordas e do fundo
+    green_color = (0, 0, 255)
+    black_color = (0, 0, 0)
+
+    # Preenche o fundo com a cor preta
+    black_background[:] = black_color
+
+    # Copia as bordas para a imagem final
+    edges_colored = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
+    edges_colored[edges != 0] = (0, 255, 0)
+
+    # Cria a janela principal e combina as telas usando HConcat e VConcat
+    top_row = np.hstack((black_screen, resized_frame))
+    bottom_row = np.hstack((empty_screen, edges_colored))
+    full_screen = np.vstack((top_row, bottom_row))
+
+    # Redimensiona a janela para preencher a tela mantendo a proporção
+    resized_screen = resize(full_screen, width=screen_width, height=screen_height)
+
+    # Exibe a janela em tela cheia
+    cv2.namedWindow("Grid Window", cv2.WINDOW_NORMAL)
+    cv2.setWindowProperty("Grid Window", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+    cv2.imshow("Grid Window", resized_screen)
+
+    # Verifica se a tecla 'q' foi pressionada para sair do loop
+    if cv2.waitKey(1) & 0xFF == ord('q'):
         break
-
+cap.release()
 cv2.destroyAllWindows()
