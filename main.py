@@ -17,14 +17,14 @@ def resize(image, width=None, height=None):
 
 # Função para desenhar o texto em uma imagem
 def draw_text(image, text, position):
-    font = cv2.FONT_HERSHEY_SIMPLEX
+    font = cv2.FONT_HERSHEY_SIMPLEXq
     font_scale = 1
     font_thickness = 2
     text_size, _ = cv2.getTextSize(text, font, font_scale, font_thickness)
 
     x, y = position
     text_position = (x, y + text_size[1])
-    cv2.putText(image, text, text_position, font, font_scale, (255, 255, 255), font_thickness, cv2.LINE_AA)
+    cv2.putText(image, text, text_position, font, font_scale, (0, 255, 0), font_thickness, cv2.LINE_AA)
 
 # Captura de vídeo da webcam
 cap = cv2.VideoCapture(0)
@@ -61,7 +61,7 @@ while True:
     # Desenha um círculo vazado no canto inferior esquerdo
     circle_radius = min(grid_width, grid_height) // 2
     circle_center = (grid_width // 2, grid_height // 2)
-    cv2.circle(black_screen, circle_center, circle_radius, (0, 255, 255), 2)
+    cv2.circle(black_screen, circle_center, circle_radius, (0, 255, 0), 2)
 
     # Adiciona a linha que gira como um radar
     #angle = (360 * time.time()) % 360  # Ângulo da linha (varia ao longo do tempo)
@@ -79,7 +79,7 @@ while True:
         int(circle_center[1] + circle_radius)
     )
 
-    cv2.line(black_screen, vertical_line_start, vertical_line_end, (0, 255, 255), 2)
+    cv2.line(black_screen, vertical_line_start, vertical_line_end, (0, 255, 0), 2)
     horizontal_line_length = circle_radius  # Comprimento da linha horizontal
     horizontal_line_angle = 0
 
@@ -92,7 +92,7 @@ while True:
         int(circle_center[1] + horizontal_line_length / 2 * math.sin(math.radians(horizontal_line_angle)))
     )
 
-    cv2.line(black_screen, horizontal_line_start, horizontal_line_end, (0, 255, 255), 2)
+    cv2.line(black_screen, horizontal_line_start, horizontal_line_end, (0, 255, 0), 2)
 
     # Cria uma imagem vazia para o canto superior direito
     empty_screen = np.zeros((grid_height, grid_width, 3), dtype=np.uint8)
