@@ -17,7 +17,7 @@ def resize(image, width=None, height=None):
 
 # Função para desenhar o texto em uma imagem
 def draw_text(image, text, position):
-    font = cv2.FONT_HERSHEY_SIMPLEXq
+    font = cv2.FONT_HERSHEY_SIMPLEX
     font_scale = 1
     font_thickness = 2
     text_size, _ = cv2.getTextSize(text, font, font_scale, font_thickness)
