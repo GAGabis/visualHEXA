@@ -141,7 +141,8 @@ while True:
     cv2.namedWindow("Grid Window", cv2.WINDOW_NORMAL)
     cv2.setWindowProperty("Grid Window", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
     cv2.imshow("Grid Window", resized_screen)
-
+    #you need to be carefully with what you need, take care of them and put your risk on this device
+    #actually i dont know what i have to do
     # Verifica se a tecla 'q' foi pressionada para sair do loop
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
